@@ -1,12 +1,11 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// src/app/voice-chat/page.tsx
 'use client';
 export const dynamic = 'force-dynamic';
 
 import { useState, useRef, useEffect } from 'react';
 import { BounceLoader } from 'react-spinners';
 
-// 1) List both STT (ISO-639-1) and TTS (BCP-47) codes
+// 1) Define each language’s STT (two-letter ISO-639-1) and TTS (full BCP-47)
 const languages = [
     { label: 'French',    stt: 'fr',   tts: 'fr-FR' },
     { label: 'Spanish',   stt: 'es',   tts: 'es-ES' },
@@ -29,18 +28,17 @@ const languages = [
     { label: 'Vietnamese',stt: 'vi',   tts: 'vi-VN'}
   ];
 
-// 2) Hook to pick the right SpeechSynthesisVoice *in the browser only*
+// 2) Hook to pick the matching voice from speechSynthesis.getVoices()
 function useVoiceFor(ttsTag: string) {
   const [voice, setVoice] = useState<SpeechSynthesisVoice|null>(null);
 
   useEffect(() => {
     const synth = window.speechSynthesis;
-    const pick = () => {
+    function pick() {
       const vs = synth.getVoices();
       const found = vs.find(v => v.lang === ttsTag);
       if (found) setVoice(found);
-    };
-    // Try now, and again when voices load
+    }
     pick();
     synth.addEventListener('voiceschanged', pick);
     return () => synth.removeEventListener('voiceschanged', pick);
@@ -51,18 +49,31 @@ function useVoiceFor(ttsTag: string) {
 
 export default function VoiceChatPage() {
   // 3) App state
-  const [sel,      setSel]      = useState(languages[0]);
-  const [msgs,     setMsgs]     = useState<{role:string;content:string}[]>([]);
-  const [mode,     setMode]     = useState<'idle'|'listening'|'processing'|'speaking'>('idle');
-  const [loading,  setLoading]  = useState(false);
+  const [sel,     setSel]     = useState(languages[0]);
+  const [msgs,    setMsgs]    = useState<{role:string;content:string}[]>([]);
+  const [mode,    setMode]    = useState<'idle'|'listening'|'processing'|'speaking'>('idle');
+  const [loading, setLoading] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
 
   const mediaRef  = useRef<MediaRecorder>(null);
   const chunksRef = useRef<Blob[]>([]);
   const ttsVoice  = useVoiceFor(sel.tts);
 
-  // 4) Start/stop recording
-  const toggleListen = async () => {
-    if (mode === 'idle') {
+  // 4) Primer: runs once on first tap to unlock mobile TTS
+  const unlockSpeech = () => {
+    const primer = new SpeechSynthesisUtterance('');
+    window.speechSynthesis.speak(primer); // silent utterance unlocks policy :contentReference[oaicite:0]{index=0}
+    setUnlocked(true);
+  };
+
+  // 5) Combined click handler
+  const handleButtonClick = async () => {
+    if (!unlocked) {
+      unlockSpeech();
+      return;
+    }
+    if (mode === 'idle' || mode === 'speaking') {
+      // start recording
       const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRef.current  = recorder;
@@ -72,21 +83,23 @@ export default function VoiceChatPage() {
       recorder.start();
       setMode('listening');
     } else if (mode === 'listening') {
+      // stop recording
       mediaRef.current?.stop();
     }
   };
 
-  // 5) When recording stops: transcribe → chat → speak
+  // 6) After recording stops: Whisper → Chat → Speak
   const onStop = async () => {
     setMode('processing');
     setLoading(true);
 
-    // build and send FormData to Whisper
+    // build audio blob
     const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
     const form = new FormData();
     form.append('file', audioBlob, 'speech.webm');
-    form.append('lang', sel.stt); // two-letter code
+    form.append('lang', sel.stt); // two-letter code for Whisper
 
+    // Whisper transcription
     const whisperRes = await fetch('/api/whisper', { method:'POST', body: form });
     if (!whisperRes.ok) {
       console.error('Whisper failed:', await whisperRes.text());
@@ -97,19 +110,22 @@ export default function VoiceChatPage() {
     const { text: userText } = await whisperRes.json();
     setMsgs(m => [...m, { role:'user', content:userText }]);
 
-    // send to chat
+    // Chat response
     const chatRes = await fetch('/api/voice-chat', {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ history:[...msgs, {role:'user',content:userText}], lang: sel.stt })
+      body: JSON.stringify({
+        history: [...msgs, { role:'user', content:userText }],
+        lang: sel.stt
+      })
     });
     const { reply } = await chatRes.json();
     setMsgs(m => [...m, { role:'assistant', content:reply }]);
     setLoading(false);
 
-    // speak the reply
+    // Speak the AI’s reply
     const utter = new SpeechSynthesisUtterance(reply);
-    utter.lang = sel.tts;     // full BCP-47
+    utter.lang = sel.tts;          // use full BCP-47 tag
     if (ttsVoice) utter.voice = ttsVoice;
     utter.onstart = () => setMode('speaking');
     utter.onend   = () => setMode('idle');
@@ -122,7 +138,7 @@ export default function VoiceChatPage() {
                       border-4 border-black rounded bg-white p-4">
         <h1 className="text-2xl font-bold text-[#035A9D]">Voice Chat Tutor</h1>
 
-        {/* language selector */}
+        {/* Language selector */}
         <select
           value={sel.stt}
           onChange={e => {
@@ -136,39 +152,42 @@ export default function VoiceChatPage() {
           ))}
         </select>
 
-        {/* record / stop / processing / speaking button */}
+        {/* Record/Stop/Processing/Speaking button */}
         <button
-          onClick={toggleListen}
-          className={`relative w-24 h-24 rounded-full flex items-center justify-center focus:outline-none
-                     ${mode==='idle'      && 'bg-green-800'}
-                     ${mode==='listening' && 'bg-red-500'}
-                     ${mode==='processing'&& 'bg-white'}
-                     ${mode==='speaking'  && 'bg-blue-500'}`}
+          onClick={handleButtonClick}
+          className={`
+            relative w-24 h-24 rounded-full flex items-center justify-center focus:outline-none
+            ${mode==='idle'      && 'bg-green-800'}
+            ${mode==='listening' && 'bg-red-500'}
+            ${mode==='processing'&& 'bg-white'}
+            ${mode==='speaking'  && 'bg-blue-500'}
+          `}
         >
-          {mode === 'processing'
+          {mode==='processing'
             ? <BounceLoader loading={loading} size={50} color='#57B9FF' />
             : <span className="text-white text-lg font-bold">
-                {mode==='idle'?'▶': mode==='listening'?'●': '🔊'}
+                {mode==='idle'?'▶':
+                 mode==='listening'?'●':
+                 mode==='speaking'?'🔊':null}
               </span>
           }
         </button>
 
-        {/* chat history */}
+        {/* Conversation history */}
         <div className="h-64 w-full overflow-y-auto border p-2 rounded space-y-2 text-black">
-          {msgs.map((m,i) =>
-            <div key={i} className={m.role==='user' ? 'text-right' : 'text-left'}>
+          {msgs.map((m,i) => (
+            <div key={i} className={m.role==='user'?'text-right':'text-left'}>
               <span className={`inline-block p-2 rounded
                                  ${m.role==='user'?'bg-green-200':'bg-blue-200'}`}>
                 {m.content}
               </span>
             </div>
-          )}
+          ))}
         </div>
-        <p className="text-sm text-gray-500">
-          Switch languages anytime during conversation.
-        </p>
+        <p className="text-sm text-gray-500">Switch languages anytime during conversation.</p>
       </div>
     </div>
   );
 }
+
 
