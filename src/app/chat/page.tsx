@@ -11,7 +11,6 @@ export default function ChatPage() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [latestMsgIndex, setLatestMsgIndex] = useState(-1);
 
   async function send() {
     if (!input) return toast.error('Enter a message');
@@ -27,7 +26,6 @@ export default function ChatPage() {
     });
     const { reply } = await res.json();
     setMsgs(m => [...m, { role: 'assistant', content: reply }]);
-    setLatestMsgIndex(histLength => histLength + 2);
     setLoading(false);
   }
 
@@ -37,7 +35,7 @@ export default function ChatPage() {
     <div className="h-screen w-screen mx-auto bg-blue-300 p-6">
     <div className="mx-auto space-y-4 p-4 border rounded border-black border-4 bg-white">
       <h1 className="text-2xl font-bold text-[#035A9D]">Text Chat Tutor</h1>
-      <h1 className="text-xl font-bold text-[#035A9D]">Choose the written language you're comfortable with 👇</h1>
+      <h1 className="text-xl font-bold text-[#035A9D]">Choose the written language you are comfortable with 👇</h1>
       <select value={firstLang} onChange={e => setFirstLang(e.target.value)} className="mt-2 p-2 border rounded text-black">
         <option>Chinese (Mandarin)</option>
         <option>Chinese (Cantonese)</option>

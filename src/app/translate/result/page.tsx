@@ -20,7 +20,7 @@ export default function ResultPage() {
       .then(r => r.json())
       .then(data => setTranslation(data.translation))
       .finally(() => setLoading(false));
-  }, []);
+  }, [text, lang]);
 
   if (loading) return (
     
