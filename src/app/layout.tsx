@@ -11,6 +11,7 @@ import world from "../../public/world.jpg";
 const griffy = Griffy({
   weight: '400',
   style:"normal",
+  subsets: ['latin']
   
 })
 

@@ -134,9 +134,12 @@ export default function VoiceChatPage() {
         ))}
       </div>
       <p className="text-sm text-gray-500">Switch languages anytime during conversation.</p>
-      <h1 className="text-2xl font-bold mt-5">Instructions</h1>
+      <h1 className="text-2xl font-bold mt-5 text-[#035A9D]">Instructions</h1>
       <ul>
-        <li className="text-sm text-[#035A9D]">Switch languages anytime during conversation.</li>
+       <li className="text-sm text-gray-500"> - Press on green Play Button to record</li>
+       <li className="text-sm text-gray-500"> - Press on red button to stop recording</li>
+       <li className="text-sm text-gray-500"> - Wait for response</li>
+       <li className="text-sm text-gray-500"> - Enjoy learning through a friendly conversation with our AI Tutor!</li>
       </ul>  
     </div>
     
