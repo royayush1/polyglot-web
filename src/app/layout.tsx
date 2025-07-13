@@ -6,7 +6,6 @@ import { useState } from 'react';
 import Image from 'next/image';
 import parrot from '../../public/parrot.png';
 import {Griffy} from "next/font/google";
-import world from "../../public/world.jpg";
 
 const griffy = Griffy({
   weight: '400',
