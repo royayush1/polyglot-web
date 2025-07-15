@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <nav className="flex flex-col p-4 space-y-4 items-center">
             <a href="/translate" className="text-black hover:bg-blue-600 p-2">Translate 💻</a>
             <a href="/chat" className="text-black hover:bg-gray-100 p-2 rounded">Chat 💬</a>
-            <a href="/voice-chat" className="text-black hover:bg-gray-100 p-2 rounded">Voice 🎤</a>
+            <a href="/voice-chat" className="text-black hover:bg-gray-100 p-2 rounded">Voice Chat 🎤</a>
           </nav>
           <Image src={'/earth.png'} width={500} height={500} className='mt-50' alt='earth'/>
         </div>
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             md:h-64
             p-4">
             <div className="absolute inset-0 bg-blue-900/50 pointer-events-none" />
-            <button onClick={() => setOpen(!open)} className="text-gray-600 mr-4">☰</button>
+            <button onClick={() => setOpen(!open)} className="text-gray-600 mr-4 text-2xl hover:bg-gray-600">☰</button>
             <Image src={parrot} 
             className="object-contain z-75 w-15 h-15 md:w-25 md:h-25"
             alt='Parrot'/>

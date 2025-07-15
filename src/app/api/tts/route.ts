@@ -17,7 +17,6 @@ export async function POST(req: Request) {
     audioConfig: { audioEncoding: 'MP3' },
   });
   const base64 = (response.audioContent as Buffer).toString('base64');
-  console.log("Google tts response: ", response)
   return NextResponse.json({ audio: base64 });
 } catch(e:any) {
     console.error('Google API Error:', e);
