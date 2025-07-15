@@ -11,12 +11,15 @@ const client = new textToSpeech.TextToSpeechClient(clientConfig);
 export async function POST(req: Request) {
   try{
     const { text, ttsTag } = await req.json() as { text: string; ttsTag: string };
+    console.log("Text given to tts: ", text);
+    console.log("ttsTag: ", ttsTag);
   const [response] = await client.synthesizeSpeech({
     input: { text },
     voice: { languageCode: ttsTag, ssmlGender: 'NEUTRAL' },
     audioConfig: { audioEncoding: 'MP3' },
   });
   const base64 = (response.audioContent as Buffer).toString('base64');
+  console.log("Google tts response: ", response)
   return NextResponse.json({ audio: base64 });
 } catch(e:any) {
     console.error('Google API Error:', e);
