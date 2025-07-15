@@ -79,7 +79,7 @@ export default function VoiceChatPage() {
       mediaRef.current  = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = e => chunksRef.current.push(e.data);
-      recorder.onstop          = onStop;
+      recorder.onstop = onStop;
       recorder.start();
       setMode('listening');
     } else if (mode === 'listening') {
