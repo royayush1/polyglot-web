@@ -95,10 +95,18 @@ export default function VoiceChatPage() {
   
     try {
       // 1) Transcribe with Whisper...
-      const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const rawType = chunksRef.current[0]?.type || 'audio/webm';
+      const audioBlob = new Blob(chunksRef.current, { type: rawType });
+      
+      // strip parameters and pick subtype
+      const mimeMain = audioBlob.type.split(';')[0].trim(); // e.g. "audio/webm"
+      const ext      = mimeMain.split('/')[1];              //       "webm"
+    
+      // 3) Append to FormData using the matching extension
       const form = new FormData();
-      form.append('file', audioBlob, 'speech.webm');
+      form.append('file', audioBlob, `speech.${ext}`);
       form.append('lang', sel.stt);
+    
       const whisperRes = await fetch('/api/whisper', { method: 'POST', body: form });
       if (!whisperRes.ok) throw new Error(await whisperRes.text());
       const { text: userText } = await whisperRes.json();
