@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google-cloud/text-to-speech": "^6.2.0",
     "formidable": "^3.5.4",
     "framer-motion": "^12.23.3",
     "next": "15.3.5",

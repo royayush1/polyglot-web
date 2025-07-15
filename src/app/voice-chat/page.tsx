@@ -5,7 +5,6 @@ export const dynamic = 'force-dynamic';
 import { useState, useRef, useEffect } from 'react';
 import { BounceLoader } from 'react-spinners';
 
-// 1) Define each language’s STT (two-letter ISO-639-1) and TTS (full BCP-47)
 const languages = [
     { label: 'French',    stt: 'fr',   tts: 'fr-FR' },
     { label: 'Spanish',   stt: 'es',   tts: 'es-ES' },
@@ -123,13 +122,24 @@ export default function VoiceChatPage() {
     setMsgs(m => [...m, { role:'assistant', content:reply }]);
     setLoading(false);
 
-    // Speak the AI’s reply
-    const utter = new SpeechSynthesisUtterance(reply);
-    utter.lang = sel.tts;          // use full BCP-47 tag
-    if (ttsVoice) utter.voice = ttsVoice;
-    utter.onstart = () => setMode('speaking');
-    utter.onend   = () => setMode('idle');
-    window.speechSynthesis.speak(utter);
+    const ttsRes = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: reply, ttsTag: sel.tts })
+    });
+    const { audio: base64 } = await ttsRes.json();
+    
+    // convert base64 → Blob → Object URL
+    const byteChars = atob(base64);
+    const byteNumbers = new Array(byteChars.length).fill(0).map((_, i) => byteChars.charCodeAt(i));
+    const aBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'audio/mp3' });
+    const url = URL.createObjectURL(aBlob);
+    
+    // play with HTMLAudioElement
+    const player = new Audio(url);
+    player.onended = () => setMode('idle');
+    setMode('speaking');
+    player.play();
   };
 
   return (
@@ -187,8 +197,8 @@ export default function VoiceChatPage() {
         <p className="text-sm text-gray-500">Switch languages anytime during conversation.</p>
         <h1 className="text-2xl font-bold mt-5 text-[#035A9D]">Instructions</h1>
         <ul>
-            <li className="text-sm text-gray-500"> - Press on green Play Button to record</li>
-            <li className="text-sm text-gray-500"> - Press on red button to stop recording</li>
+            <li className="text-sm text-gray-500"> - Press green play button to record your response</li>
+            <li className="text-sm text-gray-500"> - Press red button to stop recording</li>
             <li className="text-sm text-gray-500"> - Wait for response</li>
             <li className="text-sm text-gray-500"> - Enjoy learning through a friendly conversation with our AI Tutor!</li>
         </ul> 
