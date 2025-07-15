@@ -59,6 +59,16 @@ export default function VoiceChatPage() {
   const chunksRef = useRef<Blob[]>([]);
   const ttsVoice  = useVoiceFor(sel.tts);
 
+  function pickMimeType() {
+    const candidates = [
+      'audio/webm;codecs=opus',
+      'audio/ogg;codecs=opus',
+      'audio/mp4;codecs=mp4a.40.2',
+      'audio/wav'
+    ];
+    return candidates.find(t => MediaRecorder.isTypeSupported(t)) || '';
+  }
+
   // 4) Primer: runs once on first tap to unlock mobile TTS
   const unlockSpeech = () => {
     const primer = new SpeechSynthesisUtterance('');
@@ -75,7 +85,10 @@ export default function VoiceChatPage() {
     if (mode === 'idle' || mode === 'speaking') {
       // start recording
       const stream   = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      const mimeType = pickMimeType();
+      const recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType })
+      : new MediaRecorder(stream);
       mediaRef.current  = recorder;
       chunksRef.current = [];
       recorder.ondataavailable = e => chunksRef.current.push(e.data);
