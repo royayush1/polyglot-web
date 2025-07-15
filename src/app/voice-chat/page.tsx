@@ -3,6 +3,7 @@
 'use client';
 export const dynamic = 'force-dynamic';
 
+import { audio } from 'framer-motion/client';
 import { useState, useRef, useEffect } from 'react';
 import { BounceLoader } from 'react-spinners';
 
@@ -149,6 +150,7 @@ export default function VoiceChatPage() {
       body: JSON.stringify({ text: reply, ttsTag: sel.tts })
     });
     const { audio: base64 } = await ttsRes.json();
+    console.log(audio);
     
     // convert base64 → Blob → Object URL
     const byteChars = atob(base64);
