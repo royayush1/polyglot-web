@@ -50,15 +50,16 @@ function useVoiceFor(ttsTag: string) {
 
 export default function VoiceChatPage() {
   // 3) App state
-  const [sel,     setSel]     = useState(languages[0]);
-  const [msgs,    setMsgs]    = useState<{role:string;content:string}[]>([]);
-  const [mode,    setMode]    = useState<'idle'|'listening'|'processing'|'speaking'>('idle');
+  const [sel, setSel]     = useState(languages[0]);
+  const [msgs, setMsgs]    = useState<{role:string;content:string}[]>([]);
+  const [mode, setMode]    = useState<'idle'|'listening'|'processing'|'speaking'>('idle');
   const [loading, setLoading] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
   const mediaRef  = useRef<MediaRecorder>(null);
   const chunksRef = useRef<Blob[]>([]);
   const ttsVoice  = useVoiceFor(sel.tts);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   function pickMimeType() {
     const candidates = [
@@ -71,16 +72,19 @@ export default function VoiceChatPage() {
   }
 
   // 4) Primer: runs once on first tap to unlock mobile TTS
-  const unlockSpeech = () => {
+  const unlockAudio = () => {
     const primer = new SpeechSynthesisUtterance('');
-    window.speechSynthesis.speak(primer); // silent utterance unlocks policy :contentReference[oaicite:0]{index=0}
+    window.speechSynthesis.speak(primer);
+    const ctx = new AudioContext();
+    ctx.resume();
+    audioCtxRef.current! = ctx;
     setUnlocked(true);
   };
 
   // 5) Combined click handler
   const handleButtonClick = async () => {
     if (!unlocked) {
-      unlockSpeech();
+      unlockAudio();
       return;
     }
     if (mode === 'idle' || mode === 'speaking') {
@@ -150,20 +154,27 @@ export default function VoiceChatPage() {
       body: JSON.stringify({ text: reply, ttsTag: sel.tts })
     });
     const { audio: base64 } = await ttsRes.json();
-    console.log(audio);
-    console.log("roy.ayush1")
-    
-    // convert base64 → Blob → Object URL
-    const byteChars = atob(base64);
-    const byteNumbers = new Array(byteChars.length).fill(0).map((_, i) => byteChars.charCodeAt(i));
-    const aBlob = new Blob([new Uint8Array(byteNumbers)], { type: 'audio/mp3' });
-    const url = URL.createObjectURL(aBlob);
-    
-    // play with HTMLAudioElement
-    const player = new Audio(url);
-    player.onended = () => setMode('idle');
-    setMode('speaking');
-    player.play();
+    // ───── Decode & play via Web Audio ────────────────
+     // 1) Base64 → binary string → Uint8Array
+      const byteChars = atob(base64);
+      const byteNumbers = new Uint8Array(
+        Array.from(byteChars).map(c => c.charCodeAt(0))
+      );
+      // 2) Make a Blob & get ArrayBuffer
+      const mp3Blob = new Blob([byteNumbers], { type: 'audio/mp3' });
+      const arrayBuffer = await mp3Blob.arrayBuffer();
+      // 3) Decode into PCM AudioBuffer
+      const audioCtx = audioCtxRef.current!;
+      const audioBuffer = await new Promise<AudioBuffer>((res, rej) =>
+        audioCtx.decodeAudioData(arrayBuffer, res, rej)
+      );
+      // 4) Play it
+      const src = audioCtx.createBufferSource();
+      src.buffer = audioBuffer;
+      src.connect(audioCtx.destination);
+      src.onended = () => setMode('idle');
+      setMode('speaking');
+      src.start();
   }catch (err: any) {
     console.error('Voice flow error:', err);
     // show an error message in your UI if you want…
