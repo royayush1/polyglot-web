@@ -91,36 +91,35 @@ export default function VoiceChatPage() {
   const onStop = async () => {
     setMode('processing');
     setLoading(true);
-
-    // build audio blob
-    const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
-    const form = new FormData();
-    form.append('file', audioBlob, 'speech.webm');
-    form.append('lang', sel.stt); // two-letter code for Whisper
-
-    // Whisper transcription
-    const whisperRes = await fetch('/api/whisper', { method:'POST', body: form });
-    if (!whisperRes.ok) {
-      console.error('Whisper failed:', await whisperRes.text());
-      setMode('idle');
-      setLoading(false);
-      return;
-    }
-    const { text: userText } = await whisperRes.json();
-    setMsgs(m => [...m, { role:'user', content:userText }]);
-
-    // Chat response
-    const chatRes = await fetch('/api/voice-chat', {
-      method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({
-        history: [...msgs, { role:'user', content:userText }],
-        lang: sel.stt
-      })
-    });
-    const { reply } = await chatRes.json();
-    setMsgs(m => [...m, { role:'assistant', content:reply }]);
-    setLoading(false);
+  
+    try {
+      // 1) Transcribe with Whisper...
+      const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+      const form = new FormData();
+      form.append('file', audioBlob, 'speech.webm');
+      form.append('lang', sel.stt);
+      const whisperRes = await fetch('/api/whisper', { method: 'POST', body: form });
+      if (!whisperRes.ok) throw new Error(await whisperRes.text());
+      const { text: userText } = await whisperRes.json();
+  
+      // 2) Atomically update msgs *and* derive the new history
+      let history: { role: string; content: string }[] = [];
+      setMsgs(prev => {
+        history = [...prev, { role: 'user', content: userText }];
+        return history;
+      });
+  
+      // 3) Send that exact history to your chat API
+      const chatRes = await fetch('/api/voice-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ history, lang: sel.stt })
+      });
+      if (!chatRes.ok) throw new Error(await chatRes.text());
+      const { reply } = await chatRes.json();
+  
+      // 4) Append the assistant reply
+      setMsgs(prev => [...prev, { role: 'assistant', content: reply }]);
 
     const ttsRes = await fetch('/api/tts', {
       method: 'POST',
@@ -140,7 +139,14 @@ export default function VoiceChatPage() {
     player.onended = () => setMode('idle');
     setMode('speaking');
     player.play();
-  };
+  }catch (err: any) {
+    console.error('Voice flow error:', err);
+    // show an error message in your UI if you want…
+    setMode('idle');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className='w-screen h-screen bg-blue-300 p-6'>

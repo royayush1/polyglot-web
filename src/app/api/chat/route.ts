@@ -8,7 +8,8 @@ export async function POST(req: Request){
     const messages = [system, ...history]
     const response = await openai.chat.completions.create({
         model: 'gpt-4.1',
-        messages
+        messages,
+        temperature: 1.2
     })
     const reply = response.choices[0].message.content!.trim();
     return NextResponse.json({reply});
