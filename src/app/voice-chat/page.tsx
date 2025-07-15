@@ -151,6 +151,7 @@ export default function VoiceChatPage() {
     });
     const { audio: base64 } = await ttsRes.json();
     console.log(audio);
+    console.log("roy.ayush1")
     
     // convert base64 → Blob → Object URL
     const byteChars = atob(base64);
