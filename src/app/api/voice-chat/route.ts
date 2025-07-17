@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   console.log("Lang: ", lang);
   const systemMessage = {
     role: 'system',
-    content: `You are a friendly ${lang} language tutor. Please respond to user using chat history: ${history} as context.`
+    content: `You are a ${lang} tutor. Converse with the user in ${lang}. The user is only supposed to reply to you and converse in ${lang}. Also give them a warning if they don't respond in ${lang}. The whole point is for the user to learn to talk in ${lang}`
   };
   const messages = [systemMessage, ...history];
   const resp = await openai.chat.completions.create({ model: 'gpt-4.1', messages, temperature: 1.2 });
