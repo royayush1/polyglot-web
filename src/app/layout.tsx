@@ -51,7 +51,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             alt='Parrot'/>
             <div className='flex flex-col'>
               <h1 className={`text-2xl sm:text-2xl md:text-6xl font-bold text-green-400 ml-4 z-75 ${griffy.className}`}>PolyGlot</h1>
-              <span className={`text-sm md:text-base text-white ml-4 z-75 md:mt-2`}>Perfect Translation every time</span>
+              <span className={`text-sm md:text-base text-white ml-4 z-75 md:mt-2`}>Perfect Translation Every Time</span>
             </div>
           </header>
           <main className="overflow-auto">
