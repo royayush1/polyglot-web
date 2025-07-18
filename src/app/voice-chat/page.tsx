@@ -130,17 +130,13 @@ export default function VoiceChatPage() {
       const { text: userText } = await whisperRes.json();
   
       // 2) Atomically update msgs *and* derive the new history
-      let history: { role: string; content: string }[] = [];
-      setMsgs(prev => {
-        history = [...prev, { role: 'user', content: userText }];
-        return history;
-      });
+      setMsgs(m => [...m, { role: 'user', content: userText }]);
   
       // 3) Send that exact history to your chat API
       const chatRes = await fetch('/api/voice-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history, lang: sel.stt })
+        body: JSON.stringify({ history: [...msgs, { role: 'user', content: userText }], lang: sel.stt })
       });
       if (!chatRes.ok) throw new Error(await chatRes.text());
       const { reply } = await chatRes.json();
